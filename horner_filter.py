@@ -64,7 +64,7 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             left, right, outer = st.columns((1, 20, 20))
             left.write("↳")
             # Treat columns with < 10 unique values as categorical
-            if 'Day' in  column:
+            if 'Day' in column:
                 user_num_input_start = right.number_input(
                     f"Starting {column}", value = 1
                 )
