@@ -186,10 +186,10 @@ def main():
     filter_list = range(start,end)
     df_filtered = df[df.index.isin(filter_list)]
 
-    csv = convert_df(df_filtered)
+    csv = convert_df(df)
 
     with st.container():
-        st.dataframe(df_filtered)  # Same as st.write(df)
+        st.dataframe(df)  # Same as st.write(df)
 
         st.download_button(
             label="Download reading plan as CSV",
