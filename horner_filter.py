@@ -7,14 +7,23 @@ from pandas.api.types import (
     is_object_dtype,
 )
 
-st.title("Auto Filter Dataframes in Streamlit")
+st.title('Professor Grant Horner\'s Bible Reading System', anchor=None)
 
 st.write(
-    """This app accomodates the blog [here](https://blog.streamlit.io/auto-generate-a-dataframe-filtering-ui-in-streamlit-with-filter_dataframe/)
-    and walks you through one example of how the Streamlit
-    Data Science Team builds add-on functions to Streamlit.
+    """This is a simple app to generate the reading plan for you. You can
+    enter the starting and ending day which you want to generate a reading plan for. 
+    For example, if I'm starting, and I want the first 30 days of the plan, I would go with the default. 
+    Next month, I can come back and download days 31 to 60.
+    Read the full [PDF](http://github.com/raw/...professor-grant-horners-bible-reading-system.pdf)
     """
 )
+
+
+
+@st.cache
+def convert_df(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv(index=False).encode('utf-8')
 
 
 def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -48,12 +57,24 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     modification_container = st.container()
 
     with modification_container:
-        to_filter_columns = st.multiselect("Filter dataframe on", df.columns)
+        #to_filter_columns = st.multiselect("Filter dataframe on", df.columns)
+        to_filter_columns = ['Day']
+
         for column in to_filter_columns:
-            left, right = st.columns((1, 20))
+            left, right, outer = st.columns((1, 20, 20))
             left.write("↳")
             # Treat columns with < 10 unique values as categorical
-            if is_categorical_dtype(df[column]) or df[column].nunique() < 10:
+            if 'Day' in  column:
+                user_num_input_start = right.number_input(
+                    f"Starting {column}", value = 1
+                )
+                user_num_input_end = outer.number_input(
+                    f"Ending {column}", value = 30
+                )
+                user_num_input = (user_num_input_start, user_num_input_end)
+                df = df[df[column].between(*user_num_input)]
+            
+            elif is_categorical_dtype(df[column]) or df[column].nunique() < 10:
                 user_cat_input = right.multiselect(
                     f"Values for {column}",
                     df[column].unique(),
@@ -71,6 +92,13 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     (_min, _max),
                     step=step,
                 )
+
+                user_num_input_start = right.number_input(
+                    f"Starting {column}", value = 1
+                )
+                user_num_input_end = middle.number_input(
+                    f"Ending {column}", value = 30
+                )
                 df = df[df[column].between(*user_num_input)]
             elif is_datetime64_any_dtype(df[column]):
                 user_date_input = right.date_input(
@@ -84,12 +112,26 @@ def filter_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     user_date_input = tuple(map(pd.to_datetime, user_date_input))
                     start_date, end_date = user_date_input
                     df = df.loc[df[column].between(start_date, end_date)]
+            elif 'List' in  column:
+                pass # return list of discete books to filter on
+                #df['List 1'].str.extract('(\D+)')
             else:
                 user_text_input = right.text_input(
                     f"Substring or regex in {column}",
                 )
                 if user_text_input:
                     df = df[df[column].str.contains(user_text_input)]
+
+        # Download data
+        _min = int(df['Day'].min())
+        _max = int(df['Day'].max())
+        st.download_button(
+            label="Download reading plan as CSV",
+            #data=df.to_csv().encode('utf-8'),
+            data=convert_df(df),
+            file_name=f'reading_plan__day_{_min}_to_{_max}.csv',
+            mime='text/csv',
+        )
 
     return df
 
